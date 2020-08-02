@@ -146,26 +146,19 @@ class PostgresConnection(ConnectionBackend):
         self._connection = await self._database._pool.release(self._connection)
         self._connection = None
 
-    async def fetch_all(self, query: ClauseElement) -> typing.List[typing.Mapping]:
+    async def fetch_all(self, query: ClauseElement) -> asyncpg.Record:
         assert self._connection is not None, "Connection is not acquired"
         query, args, result_columns = self._compile(query)
         rows = await self._connection.fetch(query, *args)
-        dialect = self._dialect
-        column_maps = self._create_column_maps(result_columns)
-        return [Record(row, result_columns, dialect, column_maps) for row in rows]
+        return rows
 
-    async def fetch_one(self, query: ClauseElement) -> typing.Optional[typing.Mapping]:
+    async def fetch_one(self, query: ClauseElement) -> asyncpg.Record:
         assert self._connection is not None, "Connection is not acquired"
         query, args, result_columns = self._compile(query)
         row = await self._connection.fetchrow(query, *args)
         if row is None:
             return None
-        return Record(
-            row,
-            result_columns,
-            self._dialect,
-            self._create_column_maps(result_columns),
-        )
+        return row
 
     async def fetch_val(
         self, query: ClauseElement, column: typing.Any = 0
